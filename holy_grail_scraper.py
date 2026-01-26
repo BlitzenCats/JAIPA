@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from browser_manager import BrowserManager
+from browser_manager import BrowserManager, BrowserType
 from card_creator import CharacterCardCreator
 from character_fetcher import CharacterFetcher
 from character_list_extractor import CharacterListExtractor
@@ -34,7 +34,24 @@ class HolyGrailScraper:
         self.config = config
         
         # Initialize components
-        self.browser_manager = BrowserManager(headless=config.headless)
+        # Map browser type string to BrowserType enum
+        browser_type_map = {
+            "auto": BrowserType.AUTO,
+            "chrome": BrowserType.CHROME,
+            "opera_gx": BrowserType.OPERA_GX,
+            "opera": BrowserType.OPERA,
+            "edge": BrowserType.EDGE,
+            "brave": BrowserType.BRAVE,
+            "vivaldi": BrowserType.VIVALDI,
+            "chromium": BrowserType.CHROMIUM,
+        }
+        browser_type = browser_type_map.get(config.browser_type, BrowserType.AUTO)
+
+        self.browser_manager = BrowserManager(
+            headless=config.headless,
+            browser_type=browser_type,
+            custom_binary_path=config.custom_browser_path
+        )
         self.rate_limiter = RateLimiter(config.delay_between_requests)
         self.file_manager = FileManager(str(config.output_dir))
         self.file_organizer = FileOrganizer(

@@ -8,6 +8,10 @@ from tkinter import *
 from tkinter import ttk, messagebox, filedialog
 from typing import Optional
 
+from browser_manager import (
+    BrowserType, detect_installed_browsers, get_browser_display_name
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -258,7 +262,14 @@ class ModernScraperGUI:
     def _create_config_card(self, parent):
         """Create configuration card"""
         card = self._create_card(parent, "⚙️ Configuration")
-        
+
+        # Browser selection
+        self._create_setting_row(card, "Browser",
+                                 "Select which browser to use (must be Chromium-based)",
+                                 self._create_browser_selector)
+
+        self._add_spacing(card, 10)
+
         # Output folder
         self._create_setting_row(card, "Output Folder",
                                  "Choose where to save exported files",
@@ -459,14 +470,57 @@ class ModernScraperGUI:
         # Right side - widget
         widget_creator(row)
     
+    def _create_browser_selector(self, parent):
+        """Create browser selection dropdown"""
+        widget_frame = Frame(parent, bg=self.COLORS['bg_card'])
+        widget_frame.pack(side=RIGHT)
+
+        # Detect installed browsers
+        self.installed_browsers = detect_installed_browsers()
+
+        # Build options list
+        browser_options = ["Auto-detect (recommended)"]
+        self.browser_type_map = {browser_options[0]: BrowserType.AUTO}
+
+        for browser_type, path in self.installed_browsers:
+            display_name = get_browser_display_name(browser_type)
+            browser_options.append(f"{display_name} ✓")
+            self.browser_type_map[f"{display_name} ✓"] = browser_type
+
+        # Add common browsers even if not detected (user might install later)
+        all_browsers = [
+            BrowserType.CHROME, BrowserType.OPERA_GX, BrowserType.OPERA,
+            BrowserType.EDGE, BrowserType.BRAVE, BrowserType.VIVALDI
+        ]
+        detected_types = [bt for bt, _ in self.installed_browsers]
+        for bt in all_browsers:
+            if bt not in detected_types:
+                display_name = get_browser_display_name(bt)
+                browser_options.append(display_name)
+                self.browser_type_map[display_name] = bt
+
+        self.config_vars["browser"] = StringVar(value=browser_options[0])
+
+        # Create dropdown
+        browser_combo = ttk.Combobox(widget_frame,
+                                      textvariable=self.config_vars["browser"],
+                                      values=browser_options,
+                                      width=22, font=('Segoe UI', 10),
+                                      state='readonly')
+        browser_combo.pack(ipady=4)
+
+        # Style the combobox
+        self.root.option_add('*TCombobox*Listbox.background', self.COLORS['bg_input'])
+        self.root.option_add('*TCombobox*Listbox.foreground', self.COLORS['text_main'])
+
     def _create_folder_selector(self, parent):
         """Create folder selector"""
         widget_frame = Frame(parent, bg=self.COLORS['bg_card'])
         widget_frame.pack(side=RIGHT)
-        
+
         self.config_vars["output_dir"] = StringVar(value="Output")
-        
-        entry = Entry(widget_frame, 
+
+        entry = Entry(widget_frame,
                      textvariable=self.config_vars["output_dir"],
                      width=20, font=('Segoe UI', 10),
                      bg=self.COLORS['bg_input'],
@@ -474,7 +528,7 @@ class ModernScraperGUI:
                      relief='flat', borderwidth=0,
                      insertbackground=self.COLORS['text_main'])
         entry.pack(side=LEFT, padx=(0, 8), ipady=6, ipadx=8)
-        
+
         btn = Button(widget_frame, text="📁 Browse",
                     command=self._browse_output,
                     bg=self.COLORS['bg_input'],
@@ -662,43 +716,57 @@ class ModernScraperGUI:
     
     def _launch_browser_on_startup(self):
         """Launch browser when app starts"""
-        self._log("🌐 Launching browser...", clear_placeholder=True)
-        
+        # Get selected browser type
+        browser_selection = self.config_vars.get("browser", StringVar(value="Auto-detect (recommended)")).get()
+        browser_type = self.browser_type_map.get(browser_selection, BrowserType.AUTO)
+        browser_type_str = browser_type.value
+
+        browser_display = get_browser_display_name(browser_type) if browser_type != BrowserType.AUTO else "auto-detected browser"
+        self._log(f"🌐 Launching {browser_display}...", clear_placeholder=True)
+
         # Run in background thread
         def launch():
             try:
                 from scraper_config import ScraperConfig
                 from holy_grail_scraper import HolyGrailScraper
                 from scraper_utils import setup_logging
-                
+
                 # Enable file logging for debugging
                 setup_logging(log_file="janitor_scraper.log")
-                
+
                 # Create config with defaults (will be updated when Start is clicked)
                 config = ScraperConfig(
                     message_limit=4,
                     delay_between_requests=2.0,
                     delay_between_chats=3.0,
                     output_dir="Output",
+                    browser_type=browser_type_str,
                 )
-                
+
                 self.scraper = HolyGrailScraper(config)
                 self.scraper.progress_callback = self._on_progress
                 self.scraper.log_callback = self._on_log
                 self.scraper.stop_check = lambda: self.stop_requested
-                
+
                 # Launch browser
                 if self.scraper.launch_browser():
-                    self._on_log("✅ Browser launched! Please log into JanitorAI.")
+                    actual_browser = self.scraper.browser_manager.actual_browser_type
+                    if actual_browser:
+                        browser_name = get_browser_display_name(actual_browser)
+                        self._on_log(f"✅ {browser_name} launched! Please log into JanitorAI.")
+                    else:
+                        self._on_log("✅ Browser launched! Please log into JanitorAI.")
                     self._on_log("📝 Once logged in, click 'Start Scraping' to begin.")
                     self.browser_ready = True
                 else:
                     self._on_log("❌ Failed to launch browser!")
-            
+                    self._on_log("💡 Make sure you have a Chromium-based browser installed:")
+                    self._on_log("   Chrome, Opera GX, Edge, Brave, or Vivaldi")
+
             except Exception as e:
                 self._on_log(f"❌ Error launching browser: {e}")
                 logger.exception("Browser launch error")
-        
+
         threading.Thread(target=launch, daemon=True).start()
     
     def _run_scraper(self):

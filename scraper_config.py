@@ -1,8 +1,8 @@
 """Configuration and constants for JanitorAI Scraper"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Optional
 
 # Domain constants
 JANITOR_DOMAIN = "janitorai.com"
@@ -41,7 +41,7 @@ CSS_SELECTORS = {
 @dataclass
 class ScraperConfig:
     """Configuration for JanitorAI Scraper"""
-    
+
     message_limit: int = 4  # Minimum messages for a chat to be saved (default 4: bot-user-bot-user)
     headless: bool = False  # FIXED: Always False - browser must be visible for user login
     delay_between_requests: float = 2.0
@@ -61,6 +61,8 @@ class ScraperConfig:
     extract_personas: bool = True  # Extract personas and generation settings from /my_personas
     organize_for_sillytavern: bool = True  # Organize files into SillyTavern-compatible folder structure
     recover_deleted_private_chats: bool = True  # Attempt to extract chat histories from deleted/private characters
+    browser_type: str = "auto"  # Browser to use: auto, chrome, opera_gx, opera, edge, brave, vivaldi, chromium
+    custom_browser_path: Optional[str] = None  # Custom path to browser binary (optional)
     
     @property
     def output_path(self) -> Path:

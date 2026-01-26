@@ -1,7 +1,20 @@
 # JanitorAI Scraper
 
 A tool for backing up your character chats and cards from JanitorAI.
-BIG NOTE: You need Chrome in order to use the current release (v1.0.3)
+
+## Supported Browsers
+
+This tool works with any **Chromium-based browser**:
+
+- **Google Chrome** (recommended)
+- **Opera GX** ✨
+- **Opera**
+- **Microsoft Edge**
+- **Brave**
+- **Vivaldi**
+- **Chromium**
+
+The scraper auto-detects installed browsers, or you can manually select one from the dropdown in the GUI.
 
 ## What It Does
 
@@ -27,6 +40,11 @@ Run `JanitorAI_Scraper.exe` - no installation needed.
    ```bash
    python scraper_gui.py
    ```
+
+### Browser Requirements
+- You need at least one Chromium-based browser installed (see list above)
+- ChromeDriver is required for Selenium (usually auto-downloaded)
+- For Opera GX/Opera, ChromeDriver works with matching Chromium versions
 
 ## Building the Executable
 
@@ -62,6 +80,7 @@ If you want to build the `.exe` yourself:
 ## Settings
 
 The GUI lets you configure:
+- **Browser** - Select which Chromium-based browser to use (auto-detect by default)
 - **Message Limit** - Minimum messages to save a chat
 - **Delays** - Adjust scraping speed
 - **Output Folder** - Where files are saved
@@ -76,6 +95,7 @@ Potential improvements:
 - Better edge case handling for unusual chat formats
 - Support for other frontend formats beyond SillyTavern
 - UI improvements
+- Firefox support (would require different network interception approach)
 
 ## Disclaimer
 
