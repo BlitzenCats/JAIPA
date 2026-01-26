@@ -69,26 +69,26 @@ class HolyGrailScraper:
         self.log_callback = None  # fn(message)
         self.stop_check = None  # fn() -> bool
     
+    def launch_browser(self):
+        """Phase 1: Launch browser and wait for login"""
+        logger.info("\nPHASE 1: Setting up browser")
+        if not self.browser_manager.setup_driver():
+            logger.error("Failed to initialize browser")
+            return False
+            
+        logger.info("Browser launched. Waiting for user login...")
+        return True
+
     def run(self) -> None:
-        """Run the holy grail scraper"""
+        """Run the holy grail scraper (Phase 2 onwards)"""
         try:
-            logger.info("Starting Holy Grail Scraper")
+            logger.info("Starting Holy Grail Scraper Process")
             logger.info("="*60)
             
-            # ========================================
-            # PHASE 1: BROWSER SETUP
-            # ========================================
-            logger.info("\nPHASE 1: Setting up browser")
-            if not self.browser_manager.setup_driver():
-                logger.error("Failed to initialize browser")
-                return
-            
-            # Wait for user login (CRITICAL - API calls need authentication)
-            if not self.config.headless:
-                print("\n" + "="*70)
-                print("BROWSER OPENED - Please log into https://janitorai.com")
-                print("="*70)
-                input("Press Enter once you're logged in and ready to continue...\n")
+            # Check if browser is up, if not launch it
+            if not self.browser_manager.driver:
+                if not self.launch_browser():
+                    return
             
             # Load opt-out list
             logger.info("Loading opt-out list...")
