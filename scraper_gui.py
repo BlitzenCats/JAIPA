@@ -708,14 +708,19 @@ class ModernScraperGUI:
             self.scraper.config.message_limit = self.config_vars["message_limit"].get()
             self.scraper.config.delay_between_requests = self.config_vars["delay"].get()
             self.scraper.config.delay_between_chats = self.config_vars["delay"].get() + 1.0
-            self.scraper.config.output_dir = self.config_vars["output_dir"].get()
+            
+            # Ensure output_dir is a Path object
+            from pathlib import Path
+            output_dir_str = self.config_vars["output_dir"].get()
+            self.scraper.config.output_dir = Path(output_dir_str)
+            
             self.scraper.config.keep_partial_extracts = self.config_vars["keep_partial"].get()
             self.scraper.config.keep_character_json = self.config_vars["keep_json"].get()
             self.scraper.config.extract_personas = self.config_vars["extract_personas"].get()
             self.scraper.config.organize_for_sillytavern = self.config_vars["organize_st"].get()
             self.scraper.config.recover_deleted_private_chats = self.config_vars["recover_deleted"].get()
             
-            # Update file manager output dir
+            # Update file manager output dir (must be Path)
             self.scraper.file_manager.output_dir = self.scraper.config.output_dir
             
             # Run the scraper
