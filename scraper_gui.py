@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class ModernScraperGUI:
     """Modern GUI application for JanitorAI Scraper"""
     
+    # Color scheme - Matching the screenshots exactly
     COLORS = {
         'primary': '#6366f1',      # Blue-purple (Discord button)
         'primary_hover': '#5558e3',
@@ -629,10 +630,27 @@ class ModernScraperGUI:
         self.scraper_thread.start()
     
     def _stop_scraper(self):
-        """Request scraper to stop"""
+        """Forcibly stop the scraper"""
+        self._log("🛑 Force stopping scraper...")
         self.stop_requested = True
-        self._log("⏸️ Stop requested... waiting for current operation.")
         self.stop_btn.config(state=DISABLED, bg='#334155')
+        
+        # Forcibly close the browser to terminate any ongoing operations
+        def force_stop():
+            try:
+                if self.scraper and self.scraper.browser_manager:
+                    self.scraper.browser_manager.close()
+                    self._on_log("🛑 Browser closed. Scraper terminated.")
+            except Exception as e:
+                self._on_log(f"⚠️ Error during force stop: {e}")
+            finally:
+                # Reset state
+                self.browser_ready = False
+                self.scraper = None
+                self.root.after(0, self._on_scraper_finished)
+        
+        # Run force stop in background thread to avoid blocking UI
+        threading.Thread(target=force_stop, daemon=True).start()
     
     def _launch_browser_on_startup(self):
         """Launch browser when app starts"""
@@ -716,9 +734,15 @@ class ModernScraperGUI:
         """Called when scraper finishes"""
         self.start_btn.config(state=NORMAL, bg=self.COLORS['primary'])
         self.stop_btn.config(state=DISABLED, bg='#334155')
-        self.current_label.config(text="✅ Finished!")
-        messagebox.showinfo("Complete", 
-                          "Scraper has finished successfully!")
+        
+        # Check if this was a force stop (scraper is None)
+        if self.scraper is None:
+            self.current_label.config(text="🛑 Stopped")
+            # Don't show success popup for force stop
+        else:
+            self.current_label.config(text="✅ Finished!")
+            messagebox.showinfo("Complete", 
+                              "Scraper has finished successfully!")
     
     def run(self):
         """Start the GUI"""
@@ -735,4 +759,3 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
     main()
-
