@@ -68,11 +68,18 @@ class ModernScraperGUI:
         self.total_count = 0
         self.config_vars = {}
         
+        # Scraper instance (persistent across start/stop)
+        self.scraper = None
+        self.browser_ready = False
+        
         # Build UI
         self._create_ui()
         
         # Center window
         self._center_window()
+        
+        # Launch browser automatically on startup
+        self.root.after(500, self._launch_browser_on_startup)
     
     def _setup_styles(self):
         """Setup modern ttk styles"""
@@ -601,6 +608,11 @@ class ModernScraperGUI:
     
     def _start_scraper(self):
         """Start the scraper"""
+        if not self.browser_ready:
+            messagebox.showwarning("Not Ready",
+                                  "Please wait for browser to launch and log in first!")
+            return
+        
         if self.scraper_thread and self.scraper_thread.is_alive():
             messagebox.showwarning("Already Running",
                                   "Scraper is already running!")
@@ -611,8 +623,7 @@ class ModernScraperGUI:
         self.stop_requested = False
         self.start_time = datetime.now()
         
-        self._log("🚀 Starting scraper...", clear_placeholder=True)
-        self._log("Please log in to JanitorAI in the browser window.")
+        self._log("🚀 Starting scraper process...")
         
         self.scraper_thread = threading.Thread(target=self._run_scraper, 
                                               daemon=True)
@@ -624,33 +635,65 @@ class ModernScraperGUI:
         self._log("⏸️ Stop requested... waiting for current operation.")
         self.stop_btn.config(state=DISABLED, bg='#334155')
     
+    def _launch_browser_on_startup(self):
+        """Launch browser when app starts"""
+        self._log("🌐 Launching browser...", clear_placeholder=True)
+        
+        # Run in background thread
+        def launch():
+            try:
+                from scraper_config import ScraperConfig
+                from holy_grail_scraper import HolyGrailScraper
+                from scraper_utils import setup_logging
+                
+                setup_logging()
+                
+                # Create config with defaults (will be updated when Start is clicked)
+                config = ScraperConfig(
+                    message_limit=4,
+                    delay_between_requests=2.0,
+                    delay_between_chats=3.0,
+                    output_dir="Output",
+                )
+                
+                self.scraper = HolyGrailScraper(config)
+                self.scraper.progress_callback = self._on_progress
+                self.scraper.log_callback = self._on_log
+                self.scraper.stop_check = lambda: self.stop_requested
+                
+                # Launch browser
+                if self.scraper.launch_browser():
+                    self._on_log("✅ Browser launched! Please log into JanitorAI.")
+                    self._on_log("📝 Once logged in, click 'Start Scraping' to begin.")
+                    self.browser_ready = True
+                else:
+                    self._on_log("❌ Failed to launch browser!")
+            
+            except Exception as e:
+                self._on_log(f"❌ Error launching browser: {e}")
+                logger.exception("Browser launch error")
+        
+        threading.Thread(target=launch, daemon=True).start()
+    
     def _run_scraper(self):
         """Run the scraper (background thread)"""
         try:
-            from scraper_config import ScraperConfig
-            from holy_grail_scraper import HolyGrailScraper
-            from scraper_utils import setup_logging
+            # Update config with current GUI values
+            self.scraper.config.message_limit = self.config_vars["message_limit"].get()
+            self.scraper.config.delay_between_requests = self.config_vars["delay"].get()
+            self.scraper.config.delay_between_chats = self.config_vars["delay"].get() + 1.0
+            self.scraper.config.output_dir = self.config_vars["output_dir"].get()
+            self.scraper.config.keep_partial_extracts = self.config_vars["keep_partial"].get()
+            self.scraper.config.keep_character_json = self.config_vars["keep_json"].get()
+            self.scraper.config.extract_personas = self.config_vars["extract_personas"].get()
+            self.scraper.config.organize_for_sillytavern = self.config_vars["organize_st"].get()
+            self.scraper.config.recover_deleted_private_chats = self.config_vars["recover_deleted"].get()
             
-            setup_logging()
+            # Update file manager output dir
+            self.scraper.file_manager.output_dir = self.scraper.config.output_dir
             
-            config = ScraperConfig(
-                message_limit=self.config_vars["message_limit"].get(),
-                delay_between_requests=self.config_vars["delay"].get(),
-                delay_between_chats=self.config_vars["delay"].get() + 1.0,
-                output_dir=self.config_vars["output_dir"].get(),
-                keep_partial_extracts=self.config_vars["keep_partial"].get(),
-                keep_character_json=self.config_vars["keep_json"].get(),
-                extract_personas=self.config_vars["extract_personas"].get(),
-                organize_for_sillytavern=self.config_vars["organize_st"].get(),
-                recover_deleted_private_chats=self.config_vars["recover_deleted"].get(),
-            )
-            
-            scraper = HolyGrailScraper(config)
-            scraper.progress_callback = self._on_progress
-            scraper.log_callback = self._on_log
-            scraper.stop_check = lambda: self.stop_requested
-            
-            scraper.run()
+            # Run the scraper
+            self.scraper.run()
             self._on_log("✅ Scraper completed successfully!")
             
         except Exception as e:
