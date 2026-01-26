@@ -199,9 +199,7 @@ class HolyGrailScraper:
                 
                 # Update progress (Phase 5 = first half of progress bar)
                 if self.progress_callback:
-                    # Use half the progress bar for expansion phase
-                    progress_percent = (idx / total_to_expand) * 50
-                    self.progress_callback(idx, total_to_expand * 2, f"Expanding: {char_name}", 0)
+                    self.progress_callback(idx, total_to_expand, f"Expanding: {char_name}", 0)
                 
                 # Pass character ID to expand method
                 chats = self.character_list_extractor.expand_character_to_get_chats(char_id)
@@ -265,9 +263,9 @@ class HolyGrailScraper:
                 
                 char_name = char_info.get("name", "Unknown")
                 
-                # Update progress callback (Phase 6 = second half, so add total_chars to idx)
+                # Update progress callback (Phase 6 = second half)
                 if self.progress_callback:
-                    self.progress_callback(total_chars + idx, total_chars * 2, f"Processing: {char_name}", self.chats_saved)
+                    self.progress_callback(idx, total_chars, f"Processing: {char_name}", self.chats_saved)
                 
                 try:
                     # Get chats from network response
