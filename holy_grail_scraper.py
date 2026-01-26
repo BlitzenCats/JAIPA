@@ -178,13 +178,30 @@ class HolyGrailScraper:
             logger.info("\nPHASE 5: Expanding characters to get chats (via network logging)")
             logger.info("This triggers hampter/chats/character/[ID]/chats API calls...")
             
+            if self.log_callback:
+                self.log_callback(f"📂 Expanding {len(all_characters_to_expand)} characters...")
+            
+            total_to_expand = len(all_characters_to_expand)
             for idx, (char_id, char_info) in enumerate(all_characters_to_expand.items(), 1):
+                # Check for stop request
+                if self.stop_check and self.stop_check():
+                    logger.warning("Stop requested by user")
+                    if self.log_callback:
+                        self.log_callback("Stopped by user")
+                    return
+                
                 char_name = char_info.get("name", "Unknown")
                 is_deleted = char_info.get("is_deleted", False)
                 is_private = not char_info.get("is_public", True)
                 status = "DELETED" if is_deleted else ("PRIVATE" if is_private else "PUBLIC")
                 
-                logger.info(f"[{idx}/{len(all_characters_to_expand)}] Expanding {char_name} [{status}] (ID: {char_id})")
+                logger.info(f"[{idx}/{total_to_expand}] Expanding {char_name} [{status}] (ID: {char_id})")
+                
+                # Update progress (Phase 5 = first half of progress bar)
+                if self.progress_callback:
+                    # Use half the progress bar for expansion phase
+                    progress_percent = (idx / total_to_expand) * 50
+                    self.progress_callback(idx, total_to_expand * 2, f"Expanding: {char_name}", 0)
                 
                 # Pass character ID to expand method
                 chats = self.character_list_extractor.expand_character_to_get_chats(char_id)
@@ -223,6 +240,8 @@ class HolyGrailScraper:
                 self.rate_limiter.apply_limit(self.config.delay_between_chats)
             
             logger.info(f"Expansion complete. All character chats captured via network logging.")
+            if self.log_callback:
+                self.log_callback("✅ Character expansion complete!")
             
             # Also expand deleted/private characters to get their chat histories (if enabled)
             # NOTE: This is now handled in Phase 5 above - no separate recovery phase needed
@@ -231,6 +250,9 @@ class HolyGrailScraper:
             # PHASE 6: PROCESS CHARACTERS
             # ========================================
             logger.info(f"\nPHASE 6: Processing {len(valid_characters)} characters")
+            
+            if self.log_callback:
+                self.log_callback(f"⚙️ Processing {len(valid_characters)} characters...")
             
             total_chars = len(valid_characters)
             for idx, (char_id, char_info) in enumerate(valid_characters.items(), 1):
@@ -243,9 +265,9 @@ class HolyGrailScraper:
                 
                 char_name = char_info.get("name", "Unknown")
                 
-                # Update progress callback
+                # Update progress callback (Phase 6 = second half, so add total_chars to idx)
                 if self.progress_callback:
-                    self.progress_callback(idx, total_chars, char_name, self.chats_saved)
+                    self.progress_callback(total_chars + idx, total_chars * 2, f"Processing: {char_name}", self.chats_saved)
                 
                 try:
                     # Get chats from network response
