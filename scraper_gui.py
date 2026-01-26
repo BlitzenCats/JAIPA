@@ -588,12 +588,20 @@ class ModernScraperGUI:
         self.processed_count = current
         self.total_count = total
         
+        # Calculate progress bar percentage based on phase
         if total > 0:
-            percent = (current / total) * 100
+            if current_name.startswith("Expanding:"):
+                # Phase 5 = first half of progress bar (0-50%)
+                percent = (current / total) * 50
+            elif current_name.startswith("Processing:"):
+                # Phase 6 = second half of progress bar (50-100%)
+                percent = 50 + (current / total) * 50
+            else:
+                percent = (current / total) * 100
             self.progress_var.set(percent)
         
-        status_text = f"Processing: {current_name}" if current_name else "Processing..."
-        self.current_label.config(text=status_text)
+        # Display the current action
+        self.current_label.config(text=current_name if current_name else "Processing...")
         self.stats_label.config(text=f"{current} / {total} characters")
         self.chats_label.config(text=f"{chats_saved} chats saved")
         
