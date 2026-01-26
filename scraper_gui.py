@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class ModernScraperGUI:
     """Modern GUI application for JanitorAI Scraper"""
     
-    # Color scheme - Matching the screenshots exactly
     COLORS = {
         'primary': '#6366f1',      # Blue-purple (Discord button)
         'primary_hover': '#5558e3',
@@ -736,3 +735,4 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
     main()
+
