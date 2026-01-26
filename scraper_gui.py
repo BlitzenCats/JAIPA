@@ -671,7 +671,8 @@ class ModernScraperGUI:
                 from holy_grail_scraper import HolyGrailScraper
                 from scraper_utils import setup_logging
                 
-                setup_logging()
+                # Enable file logging for debugging
+                setup_logging(log_file="janitor_scraper.log")
                 
                 # Create config with defaults (will be updated when Start is clicked)
                 config = ScraperConfig(
