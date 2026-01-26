@@ -478,9 +478,9 @@ class CharacterListExtractor:
                     logger.warning(f"Element inside accordion is a {tag_name}, not a button. Skipping.")
                     return None
                 
-                # Scroll into view
-                driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", accordion_btn)
-                time.sleep(0.3)
+                # Scroll into view with instant jump (auto) instead of smooth scroll
+                driver.execute_script("arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});", accordion_btn)
+                time.sleep(0.3)  # Increased wait for layout to stabilize
                 
                 # Click to expand using execute_script to be more precise
                 driver.execute_script("arguments[0].click();", accordion_btn)
@@ -522,7 +522,7 @@ class CharacterListExtractor:
                         accordion_btn = accordion_div.find_element(By.TAG_NAME, "button")
                         
                         # Scroll into view
-                        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", accordion_btn)
+                        driver.execute_script("arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});", accordion_btn)
                         time.sleep(0.3)
                         
                         # Click to expand
