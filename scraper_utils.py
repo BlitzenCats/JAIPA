@@ -34,22 +34,36 @@ def setup_logging(log_file: Optional[str] = None) -> None:
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
     # Force UTF-8 output on Windows console
+    # Force UTF-8 output on Windows console - ONLY if valid streams exist
     if sys.platform == 'win32':
         # Reconfigure stdout/stderr to use UTF-8
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-    
-    # Console handler with UTF-8 encoding to support Unicode characters
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter(log_format))
-    # Force UTF-8 encoding
-    if hasattr(console_handler, 'setEncoding'):
-        console_handler.setEncoding('utf-8')
+        if sys.stdout and hasattr(sys.stdout, 'buffer'):
+            try:
+                sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+        
+        if sys.stderr and hasattr(sys.stderr, 'buffer'):
+            try:
+                sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+            except Exception:
+                pass
     
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
-    root_logger.addHandler(console_handler)
+    
+    # Console handler with UTF-8 encoding - ONLY if stdout is available
+    if sys.stdout:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(logging.Formatter(log_format))
+        # Force UTF-8 encoding
+        if hasattr(console_handler, 'setEncoding'):
+            try:
+                console_handler.setEncoding('utf-8')
+            except Exception:
+                pass
+        root_logger.addHandler(console_handler)
     
     # File handler (optional)
     if log_file:
