@@ -639,7 +639,7 @@ class ModernScraperGUI:
                 est_per_char = 20.0
                 if self.scraper and hasattr(self.scraper.config, 'turbo_mode'):
                     if self.scraper.config.turbo_mode:
-                        est_per_char = 5.0
+                        est_per_char = 3.0  # Optimized: 1s waits + fast scroll
                 
                 est_process_time = total * est_per_char 
                 
