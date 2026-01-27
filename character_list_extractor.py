@@ -480,7 +480,7 @@ class CharacterListExtractor:
                 
                 # Scroll into view with instant jump (auto) instead of smooth scroll
                 driver.execute_script("arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});", accordion_btn)
-                time.sleep(0.3)  # Increased wait for layout to stabilize
+                time.sleep(self.config.scroll_wait_time)  # Wait for layout to stabilize
                 
                 # Click to expand using execute_script to be more precise
                 driver.execute_script("arguments[0].click();", accordion_btn)
@@ -523,7 +523,7 @@ class CharacterListExtractor:
                         
                         # Scroll into view
                         driver.execute_script("arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});", accordion_btn)
-                        time.sleep(0.3)
+                        time.sleep(self.config.scroll_wait_time)
                         
                         # Click to expand
                         driver.execute_script("arguments[0].click();", accordion_btn)
