@@ -261,6 +261,9 @@ class ChatNetworkExtractor:
         chat_id = chat_url.rstrip('/').split('/')[-1]
         logger.info(f"Extracting chat history for ID: {chat_id}")
         
+        # Apply rate limiting
+        self.rate_limiter.apply_limit(self.config.delay_between_chats)
+        
         # Navigate to chat page (triggers the two API calls)
         if not self.network_logger:
             logger.error("Network logger not initialized")
