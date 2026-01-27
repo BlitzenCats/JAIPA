@@ -96,7 +96,12 @@ class CharacterFetcher:
             True if successful
         """
         try:
-            if not self.browser.navigate_to(url, wait_time=5):
+            # Determine wait time
+            wait_time = 5
+            if self.config and hasattr(self.config, 'turbo_mode') and self.config.turbo_mode:
+                wait_time = 1
+                
+            if not self.browser.navigate_to(url, wait_time=wait_time):
                 return False
             
             if scroll_for_content:
