@@ -64,6 +64,7 @@ class CharacterDataParser:
             logger.debug(f"Found name from h1: {data['name']}")
         
         # Extract description from markdown div
+        markdown_div = soup.find("div", class_="markdown")
         if markdown_div:
             description_text = markdown_div.get_text(separator="\n", strip=True)
             if description_text:
