@@ -61,6 +61,7 @@ class ScraperConfig:
     extract_personas: bool = True  # Extract personas and generation settings from /my_personas
     organize_for_sillytavern: bool = True  # Organize files into SillyTavern-compatible folder structure
     recover_deleted_private_chats: bool = True  # Attempt to extract chat histories from deleted/private characters
+    turbo_mode: bool = False  # Enable high-speed optimization (minimized delays)
     
     @property
     def output_path(self) -> Path:
