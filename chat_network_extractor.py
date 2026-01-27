@@ -164,7 +164,8 @@ class ChatNetworkExtractor:
                 # Step 2: Navigate to chat (triggers network requests)
                 # Now that CDP is listening and logs are cleared, navigate
                 logger.debug(f"Navigating to chat URL (attempt {attempt}/{max_retries})")
-                if not self.browser.navigate_to(chat_url, wait_time=4):
+                wait_time = 1 if self.config.turbo_mode else 4
+                if not self.browser.navigate_to(chat_url, wait_time=wait_time):
                     logger.error("Failed to navigate to chat URL")
                     return None
                 
@@ -275,7 +276,8 @@ class ChatNetworkExtractor:
             return None
         
         # Navigate to the chat (triggers API calls)
-        if not self.browser.navigate_to(chat_url, wait_time=4):
+        wait_time = 1 if self.config.turbo_mode else 4
+        if not self.browser.navigate_to(chat_url, wait_time=wait_time):
             logger.error("Failed to navigate to chat URL")
             return None
         
