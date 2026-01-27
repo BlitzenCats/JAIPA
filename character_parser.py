@@ -64,9 +64,8 @@ class CharacterDataParser:
             logger.debug(f"Found name from h1: {data['name']}")
         
         # Extract description from markdown div
-        markdown_div = soup.find("div", class_="markdown")
         if markdown_div:
-            description_text = markdown_div.get_text(strip=True)
+            description_text = markdown_div.get_text(separator="\n", strip=True)
             if description_text:
                 data["description"] = description_text[:500]
                 logger.debug(f"Found description from markdown: {description_text[:50]}...")
@@ -120,8 +119,8 @@ class CharacterDataParser:
                 data["tags"] = tags
                 logger.debug(f"Found {len(tags)} tags: {tags[:3]}...")
         
-        # Extract from text sections
-        all_text = soup.get_text()
+        # Extract from text sections (use separator to preserve structure)
+        all_text = soup.get_text(separator="\n")
         
         if "Personality:" in all_text:
             start = all_text.find("Personality:")
@@ -215,8 +214,11 @@ class CharacterDataValidator:
         # Unescape HTML
         text = unescape(text)
         
-        # Remove extra whitespace
-        text = " ".join(text.split())
+        # Normalize whitespace but PRESERVE newlines
+        # 1. Replace multiple spaces/tabs with single space
+        text = re.sub(r'[ \t]+', ' ', text)
+        # 2. Replace multiple newlines with double newline (paragraph break)
+        text = re.sub(r'\n\s*\n', '\n\n', text)
         
         if max_length and len(text) > max_length:
             text = text[:max_length]
