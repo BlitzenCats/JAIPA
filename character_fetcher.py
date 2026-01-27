@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 class CharacterFetcher:
     """Fetches and extracts character information"""
     
-    def __init__(self, browser_manager: BrowserManager):
+    def __init__(self, browser_manager: BrowserManager, config=None):
         """Initialize character fetcher
         
         Args:
             browser_manager: BrowserManager instance
+            config: ScraperConfig instance (optional)
         """
         self.browser = browser_manager
+        self.config = config
         self.parser = CharacterDataParser()
         self.validator = CharacterDataValidator()
     
@@ -100,18 +102,21 @@ class CharacterFetcher:
             if scroll_for_content:
                 logger.debug("Scrolling page to load all content...")
                 
+                # Use config wait time or default to 0.5s
+                wait_base = self.config.scroll_wait_time if self.config else 0.5
+                
                 # Scroll to top
-                self.browser.scroll_to_top(0.5)
+                self.browser.scroll_to_top(wait_base)
                 
                 # Scroll down incrementally
                 for i in range(5):
-                    self.browser.scroll_by(0, 500, 0.5)
+                    self.browser.scroll_by(0, 500, wait_base)
                 
-                # Scroll to bottom
-                self.browser.scroll_to_bottom(2)
+                # Scroll to bottom (needs more time to trigger lazy load)
+                self.browser.scroll_to_bottom(wait_base * 4)
                 
                 # Back to top
-                self.browser.scroll_to_top(1)
+                self.browser.scroll_to_top(wait_base * 2)
             
             return True
         
