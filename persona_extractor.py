@@ -159,8 +159,8 @@ class PersonaExtractor:
                 if avatar_filename:
                     personas_dict[avatar_filename] = name
                     
-                    # Build persona description entry (keyed by name for now)
-                    persona_descriptions[name] = {
+                    # Build persona description entry (keyed by filename as requested)
+                    persona_descriptions[avatar_filename] = {
                         "description": appearance,
                         "position": 0,  # Default position
                         "depth": 2,     # Default depth
@@ -392,8 +392,8 @@ class PersonaExtractor:
     ) -> Dict[str, str]:
         """Download persona avatar images and map them to personas
         
-        For personas without avatars, downloads the default logo.png
-        and assigns it as "logo - #.png" (numbered sequentially)
+        Renames avatars to match persona names (e.g., "PersonaName.png") to ensure uniqueness
+        and friendly filenames. Handles duplicates by appending suffixes.
         
         Args:
             store_state: Parsed _storeState_ dictionary
@@ -403,9 +403,10 @@ class PersonaExtractor:
             Dictionary mapping persona index (str) to avatar filename
         """
         import requests
+        from scraper_utils import sanitize_filename
         
         avatar_mapping = {}  # Index -> filename mapping
-        default_logo_counter = 1  # Counter for default logos
+        used_filenames = set()  # Track filenames to prevent duplicates
         
         try:
             personas_list = store_state.get("Sb", {}).get("personas", [])
@@ -414,10 +415,30 @@ class PersonaExtractor:
                 name = persona.get("name", "Unknown")
                 avatar = persona.get("avatar", "")
                 
+                # Determine extension
+                ext = ".png"
+                if avatar and "." in avatar:
+                    ext = f".{avatar.split('.')[-1]}"
+                    if "?" in ext:  # Clean query params
+                        ext = ext.split("?")[0]
+                
+                # Base filename from persona name
+                safe_name = sanitize_filename(name)
+                base_filename = f"{safe_name}{ext}"
+                
+                # Ensure uniqueness
+                final_filename = base_filename
+                counter = 2
+                while final_filename in used_filenames:
+                    final_filename = f"{safe_name}_{counter}{ext}"
+                    counter += 1
+                
+                used_filenames.add(final_filename)
+                output_path = output_dir / final_filename
+                
                 if avatar:
                     # Persona has a custom avatar
                     avatar_url = f"{PersonaExtractor.AVATAR_BASE_URL}{avatar}"
-                    output_path = output_dir / avatar
                     
                     try:
                         logger.debug(f"Downloading avatar for '{name}': {avatar_url}")
@@ -427,8 +448,8 @@ class PersonaExtractor:
                             with open(output_path, 'wb') as f:
                                 f.write(response.content)
                             
-                            avatar_mapping[str(idx)] = avatar
-                            logger.info(f"✓ Downloaded avatar: {avatar}")
+                            avatar_mapping[str(idx)] = final_filename
+                            logger.info(f"✓ Downloaded avatar for '{name}': {final_filename}")
                         else:
                             logger.warning(f"Failed to download avatar {avatar} (status {response.status_code}), using default")
                             # Fall through to download default
@@ -441,9 +462,7 @@ class PersonaExtractor:
                 
                 if not avatar:
                     # Persona has no avatar or download failed - use default logo
-                    default_filename = f"logo - {default_logo_counter}.png"
                     avatar_url = PersonaExtractor.DEFAULT_AVATAR_URL
-                    output_path = output_dir / default_filename
                     
                     try:
                         logger.debug(f"Downloading default logo for '{name}': {avatar_url}")
@@ -453,9 +472,8 @@ class PersonaExtractor:
                             with open(output_path, 'wb') as f:
                                 f.write(response.content)
                             
-                            avatar_mapping[str(idx)] = default_filename
-                            logger.info(f"✓ Downloaded default avatar as: {default_filename}")
-                            default_logo_counter += 1
+                            avatar_mapping[str(idx)] = final_filename
+                            logger.info(f"✓ Downloaded default avatar for '{name}' as: {final_filename}")
                         else:
                             logger.warning(f"Failed to download default logo (status {response.status_code})")
                     
