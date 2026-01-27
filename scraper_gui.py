@@ -72,6 +72,10 @@ class ModernScraperGUI:
         self.scraper = None
         self.browser_ready = False
         
+        # Phase tracking for better ETA
+        self.current_phase = "init"
+        self.phase_start_time: Optional[datetime] = None
+        
         # Build UI
         self._create_ui()
         
@@ -584,33 +588,69 @@ class ModernScraperGUI:
     
     def _update_progress(self, current: int, total: int, 
                         current_name: str = "", chats_saved: int = 0):
-        """Update progress display"""
+        """Update progress display with phase-aware ETA"""
         self.processed_count = current
         self.total_count = total
         
+        # Determine current phase and detect transitions
+        new_phase = self.current_phase
+        if current_name.startswith("Expanding:"):
+            new_phase = "expanding"
+        elif current_name.startswith("Processing:"):
+            new_phase = "processing"
+            
+        # Reset timer on phase change
+        if new_phase != self.current_phase:
+            self.current_phase = new_phase
+            self.phase_start_time = datetime.now()
+            # If entering processing, we might want to reset 'current' relative to phase start
+            # But 'current' here is cumulative or absolute depending on phase
+        
         # Calculate progress bar percentage based on phase
         if total > 0:
-            if current_name.startswith("Expanding:"):
+            if self.current_phase == "expanding":
                 # Phase 5 = first half of progress bar (0-50%)
                 percent = (current / total) * 50
-            elif current_name.startswith("Processing:"):
+            elif self.current_phase == "processing":
                 # Phase 6 = second half of progress bar (50-100%)
+                # Note: current counts from 0 again for processing phase in updated scraper logic
                 percent = 50 + (current / total) * 50
             else:
                 percent = (current / total) * 100
             self.progress_var.set(percent)
         
+        # Calculate ETA based on phase
+        eta_str = "Calculating..."
+        if self.phase_start_time and total > 0 and current > 0:
+            elapsed = (datetime.now() - self.phase_start_time).total_seconds()
+            
+            if self.current_phase == "expanding":
+                # Heuristic: Expansion takes ~1.3s/char, Processing takes ~20s/char
+                # Remaining expansion
+                avg_expand_time = elapsed / current
+                remaining_expand_time = (total - current) * avg_expand_time
+                
+                # Estimated processing time (future)
+                est_process_time = total * 20.0 
+                
+                remaining_seconds = remaining_expand_time + est_process_time
+                eta = timedelta(seconds=int(remaining_seconds))
+                eta_str = f"🕐 ETA: {str(eta)} (Est.)"
+                
+            elif self.current_phase == "processing":
+                # Moving average for processing
+                avg_process_time = elapsed / current
+                remaining_process_time = (total - current) * avg_process_time
+                
+                eta = timedelta(seconds=int(remaining_process_time))
+                eta_str = f"🕐 ETA: {str(eta)}"
+        
+        self.eta_label.config(text=eta_str)
+        
         # Display the current action
         self.current_label.config(text=current_name if current_name else "Processing...")
         self.stats_label.config(text=f"{current} / {total} characters")
         self.chats_label.config(text=f"{chats_saved} chats saved")
-        
-        if self.start_time and current > 0:
-            elapsed = (datetime.now() - self.start_time).total_seconds()
-            avg_time = elapsed / current
-            remaining = (total - current) * avg_time
-            eta = timedelta(seconds=int(remaining))
-            self.eta_label.config(text=f"🕐 ETA: {str(eta)}")
         
         self.root.update_idletasks()
     
@@ -630,6 +670,10 @@ class ModernScraperGUI:
         self.stop_btn.config(state=NORMAL, bg=self.COLORS['danger'])
         self.stop_requested = False
         self.start_time = datetime.now()
+        
+        # Reset phase tracking
+        self.current_phase = "init"
+        self.phase_start_time = None
         
         self._log("🚀 Starting scraper process...")
         
