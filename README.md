@@ -1,7 +1,7 @@
 # JanitorAI Scraper
 
 A tool for backing up your character chats and cards from JanitorAI.
-BIG NOTE: You need Chrome in order to use the current release (v1.0.4)
+BIG NOTE: You need Chrome in order to use the current release (v1.0.7)
 
 ## What It Does
 
