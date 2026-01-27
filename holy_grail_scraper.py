@@ -49,7 +49,7 @@ class HolyGrailScraper:
             self.browser_manager,
             config
         )
-        self.character_fetcher = CharacterFetcher(self.browser_manager)
+        self.character_fetcher = CharacterFetcher(self.browser_manager, config)
         self.chat_extractor = ChatNetworkExtractor(
             self.browser_manager,
             self.rate_limiter,
