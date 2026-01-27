@@ -105,12 +105,14 @@ class CharacterListExtractor:
             while scroll_count < max_scrolls and no_progress_count < max_no_progress:
                 # Scroll down using window scroll
                 try:
-                    driver.execute_script("window.scrollBy(0, 1000);")
+                    scroll_increment = 3000 if self.config.turbo_mode else 1000
+                    driver.execute_script(f"window.scrollBy(0, {scroll_increment});")
                     logger.debug(f"Scrolled window (scroll #{scroll_count + 1})")
                 except Exception as e:
                     logger.warning(f"Scroll attempt {scroll_count + 1} failed: {e}")
                 
-                time.sleep(0.4) 
+                wait_time = self.config.scroll_wait_time if self.config.turbo_mode else 0.4
+                time.sleep(wait_time) 
                 scroll_count += 1
                 
                 # Process network responses
@@ -421,8 +423,11 @@ class CharacterListExtractor:
                     pass
                 
                 # Scroll down
-                driver.execute_script("window.scrollBy(0, 300);")
-                time.sleep(0.5)
+                scroll_increment = 500 if self.config.turbo_mode else 300
+                driver.execute_script(f"window.scrollBy(0, {scroll_increment});")
+                
+                wait_time = self.config.scroll_wait_time if self.config.turbo_mode else 0.5
+                time.sleep(wait_time)
             
             logger.warning(f"Could not find character {character_id} after {max_scrolls} scrolls")
             return False
