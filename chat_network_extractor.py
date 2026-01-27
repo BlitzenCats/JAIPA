@@ -281,31 +281,38 @@ class ChatNetworkExtractor:
             logger.error("Failed to navigate to chat URL")
             return None
         
-        time.sleep(1)  # Additional wait for API responses
-        
-        # Capture all responses containing this chat ID
+        # Capture all responses containing this chat ID (loop for up to 5s for robustness)
         all_responses = []
-        captured = self.network_logger.parse_network_responses()
+        capture_start = time.time()
+        capture_timeout = 5.0
         
-        logger.debug(f"Captured {len(captured)} total responses")
-        
-        for request_id, metadata in captured.items():
-            if chat_id in metadata['url']:
-                logger.debug(f"Found matching URL: {metadata['url']}")
-                body = self.network_logger.get_response_body(request_id)
+        while time.time() - capture_start < capture_timeout:
+            captured = self.network_logger.parse_network_responses()
+            
+            for request_id, metadata in captured.items():
+                if chat_id in metadata['url']:
+                    logger.debug(f"Found matching URL: {metadata['url']}")
+                    body = self.network_logger.get_response_body(request_id)
+                    
+                    if body:
+                        try:
+                            data = json.loads(body)
+                            all_responses.append({
+                                'url': metadata['url'],
+                                'data': data
+                            })
+                            logger.debug(f"Captured response from {metadata['url']}")
+                        except json.JSONDecodeError as e:
+                            logger.debug(f"Failed to parse JSON from {metadata['url']}: {e}")
+            
+            # Check if we've found the actual chat data response (not just framework data)
+            # breaking early if we have the "meat" of the response
+            if any('chatMessages' in r['data'] or 'character' in r['data'] for r in all_responses if isinstance(r.get('data'), dict)):
+                break
                 
-                if body:
-                    try:
-                        data = json.loads(body)
-                        all_responses.append({
-                            'url': metadata['url'],
-                            'data': data
-                        })
-                        logger.debug(f"Captured response from {metadata['url']}")
-                    except json.JSONDecodeError as e:
-                        logger.debug(f"Failed to parse JSON from {metadata['url']}: {e}")
+            time.sleep(0.5)
         
-        logger.info(f"Found {len(all_responses)} responses for chat {chat_id}")
+        logger.info(f"Found {len(all_responses)} total responses for chat {chat_id} after polling")
         
         # Identify the correct response (not the React framework)
         for idx, resp in enumerate(all_responses, 1):
