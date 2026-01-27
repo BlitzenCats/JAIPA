@@ -314,6 +314,10 @@ class ModernScraperGUI:
         self._create_checkbox(card, "recover_deleted", "🔄 Recover deleted/private chats",
                              "⚠️ Only recovers chat histories, not character cards",
                              True, warning=True)
+                             
+        self._create_checkbox(card, "turbo_mode", "⚡ Turbo Mode (High Speed)",
+                             "Minimizes all delays. Use only if you have a fast, stable connection",
+                             False)
     
     def _create_progress_card(self, parent):
         """Create progress card"""
@@ -631,7 +635,13 @@ class ModernScraperGUI:
                 remaining_expand_time = (total - current) * avg_expand_time
                 
                 # Estimated processing time (future)
-                est_process_time = total * 20.0 
+                # Check for turbo mode to adjust estimate
+                est_per_char = 20.0
+                if self.scraper and hasattr(self.scraper.config, 'turbo_mode'):
+                    if self.scraper.config.turbo_mode:
+                        est_per_char = 5.0
+                
+                est_process_time = total * est_per_char 
                 
                 remaining_seconds = remaining_expand_time + est_process_time
                 eta = timedelta(seconds=int(remaining_seconds))
@@ -764,8 +774,19 @@ class ModernScraperGUI:
             self.scraper.config.organize_for_sillytavern = self.config_vars["organize_st"].get()
             self.scraper.config.recover_deleted_private_chats = self.config_vars["recover_deleted"].get()
             
+            # turbo mode overrides
+            self.scraper.config.turbo_mode = self.config_vars["turbo_mode"].get()
+            if self.scraper.config.turbo_mode:
+                self.scraper.config.delay_between_requests = 0.5
+                self.scraper.config.delay_between_chats = 1.0
+                self.scraper.config.scroll_wait_time = 0.1
+                self._on_log("⚡ Turbo Mode active: Minimizing delays...")
+            
             # Update file manager output dir (must be Path)
             self.scraper.file_manager.output_dir = self.scraper.config.output_dir
+            
+            # Sync rate limiter delay with new config
+            self.scraper.rate_limiter.delay = self.scraper.config.delay_between_requests
             
             # Run the scraper
             self.scraper.run()
