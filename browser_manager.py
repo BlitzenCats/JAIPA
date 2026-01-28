@@ -3,6 +3,8 @@
 import logging
 import time
 import traceback
+import re
+import subprocess
 from typing import Optional
 
 from selenium import webdriver
@@ -18,6 +20,44 @@ except ImportError:
     HAS_UNDETECTED = False
 
 logger = logging.getLogger(__name__)
+
+
+def get_chrome_version() -> Optional[int]:
+    """Detect installed Chrome version on Windows.
+    
+    Returns:
+        Major version number (e.g., 144) or None if detection fails
+    """
+    try:
+        # Try Windows registry first (most reliable)
+        try:
+            import winreg
+            reg_path = r"Software\Google\Chrome\BLBeacon"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path) as key:
+                version_str, _ = winreg.QueryValueEx(key, "version")
+                major_version = int(version_str.split(".")[0])
+                logger.info(f"Detected Chrome version {version_str} (major: {major_version})")
+                return major_version
+        except Exception:
+            pass
+        
+        # Fallback: Query Chrome directly
+        result = subprocess.run(
+            [r"C:\Program Files\Google\Chrome\Application\chrome.exe", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            version_match = re.search(r"Chrome (\d+)", result.stdout)
+            if version_match:
+                major_version = int(version_match.group(1))
+                logger.info(f"Detected Chrome version via CLI (major: {major_version})")
+                return major_version
+    except Exception as e:
+        logger.warning(f"Failed to detect Chrome version: {e}")
+    
+    return None
 
 
 class BrowserManager:
@@ -69,12 +109,44 @@ class BrowserManager:
             try:
                 if HAS_UNDETECTED:
                     logger.debug("Initializing undetected-chromedriver...")
-                    self.driver = uc.Chrome(
-                        options=options,
-                        version_main=None,
-                        suppress_welcome=True,
-                        use_subprocess=False
-                    )
+                    
+                    # Detect Chrome version to ensure chromedriver matches
+                    chrome_version = get_chrome_version()
+                    
+                    try:
+                        # First attempt: use detected Chrome version if available
+                        if chrome_version:
+                            logger.info(f"Using detected Chrome version: {chrome_version}")
+                            self.driver = uc.Chrome(
+                                options=options,
+                                version_main=chrome_version,
+                                suppress_welcome=True,
+                                use_subprocess=False
+                            )
+                        else:
+                            # Fallback: auto-detect
+                            logger.info("Chrome version detection failed, using auto-detection")
+                            self.driver = uc.Chrome(
+                                options=options,
+                                version_main=None,
+                                suppress_welcome=True,
+                                use_subprocess=False
+                            )
+                    except Exception as e:
+                        # If main attempt fails, retry with use_subprocess=True
+                        logger.warning(f"Driver initialization failed: {e}. Retrying with use_subprocess=True...")
+                        try:
+                            self.driver = uc.Chrome(
+                                options=options,
+                                version_main=chrome_version if chrome_version else None,
+                                suppress_welcome=True,
+                                use_subprocess=True
+                            )
+                        except Exception as e2:
+                            # Final fallback: use standard Selenium
+                            logger.warning(f"undetected-chromedriver failed ({e2}), falling back to standard Selenium")
+                            logger.warning("Note: Bot detection may be triggered without undetected-chromedriver")
+                            self.driver = webdriver.Chrome(options=options)
                 else:
                     logger.debug("Initializing standard Selenium WebDriver...")
                     self.driver = webdriver.Chrome(options=options)
