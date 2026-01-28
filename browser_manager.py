@@ -59,9 +59,7 @@ class BrowserManager:
             if self.headless:
                 options.add_argument("--headless")
             
-            # Disable image loading for faster page loads
-            prefs = {"profile.managed_default_content_settings.images": 2}
-            options.add_experimental_option("prefs", prefs)
+            # Images are loaded by default. Use runtime methods to disable them after login if desired.
             
             # Enable network logging for API response capture
             options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
@@ -247,6 +245,40 @@ class BrowserManager:
         except Exception as e:
             logger.error(f"Error getting page source: {e}")
             return ""
+
+    def disable_images(self) -> bool:
+        """Disable image loading at runtime using Chrome DevTools Protocol.
+
+        Call this after user login when you want to stop further image requests.
+        Returns True on success, False otherwise.
+        """
+        if not self.driver:
+            logger.error("Driver not initialized")
+            return False
+
+        try:
+            # Enable Network domain and block common image extensions
+            self.driver.execute_cdp_cmd("Network.enable", {})
+            self.driver.execute_cdp_cmd("Network.setBlockedURLs", {"urls": ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.svg", "*.ico"]})
+            logger.info("Image loading disabled via CDP")
+            return True
+        except Exception as e:
+            logger.error(f"Error disabling images: {e}")
+            return False
+
+    def enable_images(self) -> bool:
+        """Re-enable image loading by clearing blocked URLs set via CDP."""
+        if not self.driver:
+            logger.error("Driver not initialized")
+            return False
+
+        try:
+            self.driver.execute_cdp_cmd("Network.setBlockedURLs", {"urls": []})
+            logger.info("Image loading enabled via CDP")
+            return True
+        except Exception as e:
+            logger.error(f"Error enabling images: {e}")
+            return False
     
     def close(self) -> None:
         """Close the browser"""
