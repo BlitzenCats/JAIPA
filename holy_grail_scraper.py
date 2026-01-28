@@ -89,6 +89,13 @@ class HolyGrailScraper:
             if not self.browser_manager.driver:
                 if not self.launch_browser():
                     return
+
+            # Disable images now that the user has started the scraper (post-login)
+            try:
+                if not self.browser_manager.disable_images():
+                    logger.warning("Failed to disable images; continuing with images enabled")
+            except Exception:
+                logger.exception("Unexpected error when attempting to disable images")
             
             # Load opt-out list
             logger.info("Loading opt-out list...")
