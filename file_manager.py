@@ -230,8 +230,8 @@ class FileManager:
             # Just prepend metadata - don't recreate!
             data_lines = [metadata] + messages
             
-            # Create filename
-            filename = f"{sanitize_filename(character_name)}_chat_{chat_index}"
+            # Create filename using chat_id for uniqueness
+            filename = f"{sanitize_filename(character_name)}_chat_{chat_id}"
             file_path = output_dir / f"{filename}.jsonl"
             
             # Save to JSONL
