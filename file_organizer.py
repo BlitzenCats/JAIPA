@@ -175,12 +175,12 @@ class FileOrganizer:
                     char_chat_dir = self.chats_dir / char_name
                     char_chat_dir.mkdir(parents=True, exist_ok=True)
                     
-                    # Copy JSONL with character name
-                    dest_jsonl = char_chat_dir / f"{char_name}.jsonl"
+                    # Copy JSONL keeping original filename to preserve chat_id uniqueness
+                    dest_jsonl = char_chat_dir / jsonl_file.name
                     
                     if self.organize_enabled:
                         shutil.copy2(jsonl_file, dest_jsonl)
-                        logger.debug(f"Copied {jsonl_file.name} → chats/{char_name}/{char_name}.jsonl")
+                        logger.debug(f"Copied {jsonl_file.name} → chats/{char_name}/{jsonl_file.name}")
                         organized_count += 1
             
             logger.info(f"[OK] Organized {organized_count} chat JSONL files (skipped {skipped_count})")
