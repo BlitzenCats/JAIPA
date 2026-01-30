@@ -126,12 +126,13 @@ class DeletedCharacterRecovery:
             logger.error(f"Error writing mapping file: {e}", exc_info=True)
             return False
     
-    def save_character_chats(self, character_name: str, chats: List[Dict]) -> bool:
+    def save_character_chats(self, character_name: str, chats: List[Dict], chat_index: int = 1) -> bool:
         """Save chat history for a deleted/private character
         
         Args:
             character_name: Character name
-            chats: List of chats
+            chats: List of chats (messages)
+            chat_index: Chat index for unique filename (prevents overwrites)
         
         Returns:
             True if successful
@@ -143,14 +144,14 @@ class DeletedCharacterRecovery:
             char_dir = self.recovery_dir / character_name
             char_dir.mkdir(parents=True, exist_ok=True)
             
-            # Save as JSONL
-            jsonl_file = char_dir / f"{character_name}.jsonl"
+            # Save as JSONL with chat index to prevent overwrites
+            jsonl_file = char_dir / f"{character_name}_chat_{chat_index}.jsonl"
             
             with open(jsonl_file, 'w', encoding='utf-8') as f:
                 for chat in chats:
                     f.write(json.dumps(chat, ensure_ascii=False) + '\n')
             
-            logger.debug(f"Saved {len(chats)} chats for {character_name}")
+            logger.debug(f"Saved {len(chats)} messages for {character_name} (chat {chat_index})")
             return True
         
         except Exception as e:
