@@ -558,8 +558,9 @@ class HolyGrailScraper:
                             messages = self.chat_extractor.get_chat_history(chat_link)
                             
                             if messages and len(messages) >= self.config.message_limit:
-                                # Save to recovery directory with chat index
-                                self.recovery_system.save_character_chats(char_name, messages, chat_index=idx)
+                                # Extract chat_id from URL for unique filename
+                                chat_id = chat_link.rstrip('/').split('/')[-1]
+                                self.recovery_system.save_character_chats(char_name, messages, chat_id=chat_id)
                                 logger.debug(f"  ✓ Saved {len(messages)} messages")
                             else:
                                 logger.debug(f"  Skipped (insufficient messages: {len(messages) if messages else 0})")
