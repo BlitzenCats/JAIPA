@@ -13,10 +13,30 @@ from scraper_config import JANITOR_DOMAIN, JANNY_DOMAIN
 logger = logging.getLogger(__name__)
 
 
+class AnonymizingFormatter(logging.Formatter):
+    """Custom formatter that anonymizes file paths in log messages"""
+    
+    def __init__(self, fmt=None, datefmt=None, style='%'):
+        super().__init__(fmt, datefmt, style)
+        # Cache the home directory path for replacement
+        self._home_dir = str(Path.home())
+    
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record, replacing home directory paths with <HOME_DIR>"""
+        formatted = super().format(record)
+        # Replace home directory path (case-insensitive for Windows)
+        if self._home_dir:
+            formatted = formatted.replace(self._home_dir, "<HOME_DIR>")
+            # Also handle forward-slash version of the path
+            formatted = formatted.replace(self._home_dir.replace("\\", "/"), "<HOME_DIR>")
+        return formatted
+
+
 def setup_logging(log_file: Optional[str] = None) -> None:
     """Configure logging for the scraper
     
-    Clears existing log file at startup to ensure only current session is logged
+    Clears existing log file at startup to ensure only current session is logged.
+    Uses AnonymizingFormatter to protect user privacy by replacing home directory paths.
     """
     import sys
     import io
@@ -56,7 +76,7 @@ def setup_logging(log_file: Optional[str] = None) -> None:
     if sys.stdout:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(logging.Formatter(log_format))
+        console_handler.setFormatter(AnonymizingFormatter(log_format))
         # Force UTF-8 encoding
         if hasattr(console_handler, 'setEncoding'):
             try:
@@ -69,7 +89,7 @@ def setup_logging(log_file: Optional[str] = None) -> None:
     if log_file:
         file_handler = logging.FileHandler(log_file, encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(logging.Formatter(log_format))
+        file_handler.setFormatter(AnonymizingFormatter(log_format))
         root_logger.addHandler(file_handler)
     
     # Suppress verbose selenium logging
